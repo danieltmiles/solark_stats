@@ -59,15 +59,14 @@ stats_to_get = {
 }
 
 
-def get_daily_grid():
+def get_daily_stat(stat: str):
     now = datetime.datetime.now()
     start_ts = f"{now.year:04}-{now.month:02}-{now.day:02}T07:00:00Z"
     end_ts = f"{now.year:04}-{now.month:02}-{now.day+1:02}T06:59:59Z"
-    # curl -G 'http://localhost:31337/query?pretty=true&epoch=ms' --data-urlencode "db=solar" --data-urlencode "q=select value from \"grid\" WHERE time >= '2022-04-16T07:00:00Z' AND time <= '2022-04-17T06:59:59Z' fill(0)"
     args = {
         'epoch': 'ms',
         'db': 'solar',
-        'q': f"SELECT value FROM grid WHERE time >= '{start_ts}' AND time <= '{end_ts}' fill(0)",
+        'q': f"SELECT value FROM \"{stat}\"WHERE time >= '{start_ts}' AND time <= '{end_ts}' fill(0)",
     }
     uri = f'http://localhost:8086/query?{urllib.parse.urlencode(args)}'
     resp = requests.post(uri)
@@ -111,13 +110,20 @@ if conn is not None and not isinstance(conn, Exception):
             requests.post("http://localhost:8086/write?db=solar", data=line)
             if count % 5 == 0:
                 logging.info(line)
-            if count % 99 == 0:
-                logging.info("logging daily grid")
-                draw_wh, push_wh = get_daily_grid()
-                line = f"grid_draw_wh value={draw_wh} {timestamp}"
-                requests.post("http://localhost:8086/write?db=solar", data=line)
-                line = f"grid_push_wh value={push_wh} {timestamp}"
-                requests.post("http://localhost:8086/write?db=solar", data=line)
+        #if count % 99 == 0:
+        if True:
+            logging.info("logging daily grid")
+            draw_wh, push_wh = get_daily_stat("grid")
+            line = f"grid_draw_wh value={draw_wh} {timestamp}"
+            requests.post("http://localhost:8086/write?db=solar", data=line)
+            line = f"grid_push_wh value={push_wh} {timestamp}"
+            requests.post("http://localhost:8086/write?db=solar", data=line)
+
+            draw_wh, push_wh = get_daily_stat("battery_load")
+            line = f"battery_draw_wh value={draw_wh} {timestamp}"
+            requests.post("http://localhost:8086/write?db=solar", data=line)
+            line = f"battery_charge_wh value={push_wh} {timestamp}"
+            requests.post("http://localhost:8086/write?db=solar", data=line)
 
         try:
             proc = subprocess.Popen(["vcgencmd", "measure_temp"], stdout=subprocess.PIPE)
