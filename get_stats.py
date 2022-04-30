@@ -62,7 +62,9 @@ stats_to_get = {
 def get_daily_stat(stat: str):
     now = datetime.datetime.now()
     start_ts = f"{now.year:04}-{now.month:02}-{now.day:02}T07:00:00Z"
-    end_ts = f"{now.year:04}-{now.month:02}-{now.day+1:02}T06:59:59Z"
+    start_dt = datetime.datetime.strptime(start_ts, '%Y-%m-%dT%H:%M:%SZ')
+    end_dt = start_dt + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
+    end_ts = end_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
     args = {
         'epoch': 'ms',
         'db': 'solar',
@@ -70,7 +72,11 @@ def get_daily_stat(stat: str):
     }
     uri = f'http://localhost:8086/query?{urllib.parse.urlencode(args)}'
     resp = requests.post(uri)
-    values = resp.json()['results'][0]['series'][0]['values']
+    try:
+        values = resp.json()['results'][0]['series'][0]['values']
+    except KeyError as kerr:
+        logging.error("unable to parse influxdb response:\n%s\n" % resp.text)
+        values = []
     push_wh = 0.0
     draw_wh = 0.0
     for i, value in enumerate(values):
@@ -85,6 +91,12 @@ def get_daily_stat(stat: str):
         else:
             draw_wh += watt_hours
     return draw_wh, push_wh
+
+resp = requests.get('http://localhost:8086/ping')
+while resp.status_code != 204:
+    print("influx not up yet, sleeping...")
+    time.sleep(1)
+    resp = requests.get('http://localhost:8086/ping')
 
 conn = client.connect()
 if conn is not None and not isinstance(conn, Exception):
@@ -110,8 +122,8 @@ if conn is not None and not isinstance(conn, Exception):
             requests.post("http://localhost:8086/write?db=solar", data=line)
             if count % 5 == 0:
                 logging.info(line)
-        #if count % 99 == 0:
-        if True:
+        if count % 99 == 0:
+        #if True:
             logging.info("logging daily grid")
             draw_wh, push_wh = get_daily_stat("grid")
             line = f"grid_draw_wh value={draw_wh} {timestamp}"
