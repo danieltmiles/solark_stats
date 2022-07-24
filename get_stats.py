@@ -56,6 +56,74 @@ stats_to_get = {
         "registers": (186, 187),
         "factor": 1,
     },
+    "pv1": {
+        "registers": (186,),
+        "factor": 1,
+    },
+    "pv2": {
+        "registers": (187,),
+        "factor": 1,
+    },
+    "grid_frequency": {
+        "registers": (79,),
+        "factor": 1,
+    },
+    "dc_dc_transformer_temperature": {
+        "registers": (90,),
+        "factor": 10,
+    },
+    "faults": {
+        "registers": (103, 104, 105, 106),
+        "factor": 1,
+    },
+    "dc_voltage_1": {
+        "registers": (109,),
+        "factor": 0.1,
+    },
+    "dc_current_1": {
+        "registers": (110,),
+        "factor": 0.1,
+    },
+    "dc_voltage_2": {
+        "registers": (111,),
+        "factor": 0.1,
+    },
+    "dc_current_2": {
+        "registers": (112,),
+        "factor": 0.1,
+    },
+    "grid_side_voltage_l1-n": {
+        "registers": (150,),
+        "factor": 0.1,
+    },
+    "grid_side_voltage_l2-n": {
+        "registers": (151,),
+        "factor": 0.1,
+    },
+    "grid_side_voltage_l1-l2": {
+        "registers": (152,),
+        "factor": 0.1,
+    },
+    "voltage_at_middle_side_of_relay_l1-l2": {
+        "registers": (153,),
+        "factor": 0.1,
+    },
+    "Inverter_output_voltage_l1-n ": {
+        "registers": (154,),
+        "factor": 0.1,
+    },
+    "Inverter_output_voltage_l2-n ": {
+        "registers": (155,),
+        "factor": 0.1,
+    },
+    "Inverter_output_voltage_l1-l2 ": {
+        "registers": (156,),
+        "factor": 0.1,
+    },
+    "grid_side_current_l1": {
+        "registers": (160,),
+        "factor": 0.01,
+    },
 }
 
 
@@ -135,6 +203,11 @@ if conn is not None and not isinstance(conn, Exception):
             line = f"battery_draw_wh value={draw_wh} {timestamp}"
             requests.post("http://localhost:8086/write?db=solar", data=line)
             line = f"battery_charge_wh value={push_wh} {timestamp}"
+            requests.post("http://localhost:8086/write?db=solar", data=line)
+
+            draw_wh, _push_wh = get_daily_stat("load")
+            logging.info(f"daily load: {draw_wh}")
+            line = f"load_draw_wh value={draw_wh} {timestamp}"
             requests.post("http://localhost:8086/write?db=solar", data=line)
 
         try:
